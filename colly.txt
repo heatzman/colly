@@ -1,0 +1,265 @@
+package main
+
+//import "fmt"
+import (
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/gocolly/colly"
+)
+
+func main() {
+	//创建collector
+	c := colly.NewCollector(
+		colly.UserAgent("Mozilla/5.0 (windows Nt 10.0; win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"),
+		colly.MaxDepth(2),
+		colly.Async(true),
+	)
+	//设置并发数和延迟
+
+	err := c.Limit(&colly.LimitRule{
+		DomainGlob:  "*",
+		Parallelism: 2,
+		Delay:       1 * time.Second,
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//设置回调函数
+	c.OnRequest(func(r *colly.Request) {
+		r.Headers.Set("Host", "baidu.com")
+		r.Headers.Set("Connection", "keep-alive")
+		r.Headers.Set("Accept", "*/*")
+		r.Headers.Set("origin", " ")
+		r.Headers.Set("Referer", "https://www.baidu.com")
+		r.Headers.Set("Accept-Encoding", "gzip, deflate")
+		r.Headers.Set("Accept-Language", "zh-CN,zh;q=0.9")
+
+		fmt.Println("Visiting", r.URL.String())
+	})
+
+	/*c.OnResponse(func(r *colly.Response) {
+		fmt.Println("Visited", r.Request.URL.String(), "with status code", r.StatusCode)
+	})*/
+
+	c.OnResponse(func(r *colly.Response) {
+		fmt.Println("response received", r.StatusCode)
+	})
+
+	c.OnError(func(r *colly.Response, err error) {
+		fmt.Println("Error:", err)
+	})
+
+	c.OnHTML("title", func(e *colly.HTMLElement) {
+		fmt.Println("Title:", e.Text)
+	})
+
+	c.OnHTML("body", func(e *colly.HTMLElement) {
+		e.ForEach(".hotnews a", func(i int, el *colly.HTMLElement) {
+			band := el.Attr("href")
+			title := el.Text
+			fmt.Printf("新闻 %d : %s - %s\n", i, title, band)
+		})
+	})
+
+	//对响应的HTML元素进行处理
+	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+		link := e.Attr("href")
+		fmt.Println("Found link:", link)
+		e.Request.Visit(link)
+	})
+
+	c.Limit(&colly.LimitRule{
+		Parallelism: 2,
+	})
+
+	//开始爬取,baidu新闻
+	c.Visit("https://news.baidu.com")
+
+	//等待异步完成
+	c.Wait()
+
+}
+
+
+
+
+
+	// 使用CSS选择器解析电影列表
+	c.OnHTML(".movie-list .movie-item", func(e *colly.HTMLElement) {
+		link := e.Attr("href")
+		absoluteURL := e.Request.AbsoluteURL(link)
+
+		// Bloom Filter去重检查
+		exists, _ := rdb.Do(context.Background(), "BF.EXISTS", bloomFilter, absoluteURL).Bool()
+		if !exists {
+			// 将新URL加入队列并标记
+			e.Request.Visit(absoluteURL)
+			rdb.Do(context.Background(), "BF.ADD", bloomFilter, absoluteURL)
+		}
+	})
+
+	// 使用XPath解析电影详情页
+	c.OnXML("//div[@class='movie-detail']", func(e *colly.XMLElement) {
+		movie := Movie{}
+
+		// XPath提取标题
+		movie.Title = e.ChildText(".//h1[@class='title']")
+
+		// 正则表达式提取年份
+		yearRe := regexp.MustCompile(`\d{4}`)
+		if yearMatch := yearRe.FindString(e.ChildText(".//span[@class='year']")); yearMatch != "" {
+			fmt.Sscanf(yearMatch, "%d", &movie.Year)
+		}
+
+		ratings := e.ChildTexts(".//span[@class='rating-value']")
+		if len(ratings) > 0 {
+			fmt.Sscanf(ratings[0], "%f", &movie.Rating)
+		}
+
+		// 存储到MySQL
+		if err := saveMovie(movie); err != nil {
+			log.Fatal("保存电影数据失败: ", err)
+		}
+	})
+
+	// 使用正则表达式匹配分页链接
+	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+		link := e.Attr("href")
+		if matched, _ := regexp.MatchString(`/page/\d+`, link); matched {
+			e.Request.Visit(e.Request.AbsoluteURL(link))
+		}
+	})
+
+
+
+
+		dsnWithoutDB := fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/", dbUser, dbPassword)
+    	db, err := sql.Open("mysql", dsnWithoutDB)
+    	if err != nil {
+    		log.Fatal("连接数据库系统失败: ", err)
+    	}
+    	// 创建数据库（如果不存在）
+    	if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS " + dbName); err != nil {
+    		log.Fatal("创建数据库失败:", err)
+
+    	}
+
+    	// 关闭当前连接，重新连接到目标数据库
+    	db.Close()
+
+    	db, err := sql.Open("mysql", dsnWithDB)
+    	dsnWithDB := fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/%s", dbUser, dbPassword, dbName)
+    	db, err := sql.Open("mysql", dsnWithDB)
+    	if err != nil {
+    		log.Fatal("重新连接数据库系统失败: ", err)
+
+    	}
+
+
+
+    		createTable := `CREATE TABLE IF NOT EXISTS movies (
+        		id INT AUTO_INCREMENT PRIMARY KEY,
+        		Title VARCHAR(255) NOT NULL,
+        		Year INT,
+        		Rating FLOAT,
+        		Actors TEXT,
+        		Directors TEXT,
+        		Genre TEXT,
+        		UNIQUE KEY unique_movie (Title,Year)
+        	) Engine=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
+        	if _, err := db.Exec(createTable); err != nil {
+        		log.Fatal("创建电影表失败:", err)
+
+        	}
+
+
+
+
+
+
+
+
+
+
+        		// 用户名密码, 若已添加白名单则不需要添加
+            	username := "t13980009862388"
+            	password := "g6ov1wx0"
+
+            	// 隧道服务器
+            	proxy_raw := "r485.kdltpspro.com:15818"
+            	// 使用 fmt.Sprintf 格式化 URL 字符串
+            	proxyString := fmt.Sprintf("http://%s:%s@%s", username, password, proxy_raw)
+            	proxyURL, err := url.Parse(proxyString)
+            	if err != nil {
+            		// 处理解析错误
+            		fmt.Println("解析代理URL时出错:", err)
+            		return
+            	}
+
+            	transport := &http.Transport{Proxy: http.ProxyURL(proxyURL)}
+
+
+
+
+            		/*	// 主解析逻辑
+                		c.OnHTML(`#content`, func(e *colly.HTMLElement) {
+                			// 使用CSS选择器获取主要容器
+                			movie := Movie{}
+
+                			// 1. CSS选择器提取标题
+                			movie.Title = e.ChildText("h1 > span[property='v:itemreviewed']")
+                			fmt.Println("标题：", movie.Title)
+
+                			// 2. XPath提取年份（通过Goquery的FilterFunction模拟）
+                			e.DOM.Find("h1").Each(func(_ int, s *goquery.Selection) {
+                				yearText := s.Contents().Last().Text()
+                				re := regexp.MustCompile(`\((\d{4})\)`)
+                				if matches := re.FindStringSubmatch(yearText); len(matches) > 1 {
+                					movie.Year = matches[1]
+                				}
+                			})
+                			fmt.Println("年份:", movie.Year)
+
+                			// 3. CSS选择器获取评分
+                			movie.Rating = e.ChildText("strong.rating_num")
+                			fmt.Println("评分:", movie.Rating)
+
+                			// 4. 组合选择器获取导演
+                			movie.Director = e.ChildText("a[rel='v:directedBy']")
+                			fmt.Println("导演:", movie.Director)
+
+                			// 5. 遍历演员列表
+                			e.ForEach("a[rel='v:starring']", func(_ int, el *colly.HTMLElement) {
+                				movie.Actors = append(movie.Actors, el.Text)
+                			})
+                			fmt.Println("演员:", movie.Director)
+
+                			// 6. 正则表达式提取类型
+                			genreRe := regexp.MustCompile(`<span property="v:genre">(.*?)</span>`)
+                			// 将 []byte 转换为 string
+                			bodyStr := string(e.Response.Body)
+                			if genres := genreRe.FindAllStringSubmatch(bodyStr, -1); genres != nil {
+                				for _, g := range genres {
+                					movie.Genre = append(movie.Genre, g[1])
+                				}
+                			}
+                			fmt.Println("类型:", movie.Genre)
+
+                			// 保存到数据库
+                			if err := saveMovie(&movie); err != nil {
+                				log.Printf("保存失败: %v", err)
+                			}
+
+                			// 初始化Bloom Filter（预估100w条数据，误判率0.1%）
+
+                			// 保证并发安全
+                			//bloom filter 过滤器
+                			// 提取链接时的处理逻辑
+
+                		})
+
+                	*/
